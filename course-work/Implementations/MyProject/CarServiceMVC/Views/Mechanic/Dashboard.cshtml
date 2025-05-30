@@ -1,0 +1,178 @@
+﻿@model CarServiceMVC.ViewModels.MechanicDashboardViewModel
+
+<h2>Mechanic Dashboard</h2>
+
+<div style="display: flex; gap: 20px;">
+    <!-- Left Panel: Customers -->
+    <div style="width: 40%;">
+        <h4>Customers</h4>
+
+        <!-- Add Customer Button -->
+        <a asp-action="CreateCustomer" asp-controller="Mechanic" class="btn btn-success mb-3">
+            + Add New Customer
+        </a>
+
+        <!-- Customer Search -->
+        <form method="get" asp-action="Dashboard" asp-controller="Mechanic" class="mb-3">
+            <div class="input-group">
+                <input type="text" name="searchTerm" class="form-control" placeholder="Search..." value="@ViewData["SearchTerm"]" />
+                <div class="input-group-text d-flex gap-2">
+                    <label class="form-check-label">
+                        <input type="radio" name="searchBy" value="name" class="form-check-input"
+                        @(ViewData["SearchBy"]?.ToString() == "name" ? "checked" : "") /> Name
+                    </label>
+                    <label class="form-check-label ms-2">
+                        <input type="radio" name="searchBy" value="phone" class="form-check-input"
+                        @(ViewData["SearchBy"]?.ToString() == "phone" ? "checked" : "") /> Phone
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary">Search</button>
+            </div>
+        </form>
+
+        <!-- Customer Table -->
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in Model.Customers)
+                {
+                    <tr class="clickable-row" data-url="@Url.Action("Dashboard", "Mechanic", new { customerId = customer.CustomerID })">
+                        <td>@customer.Name</td>
+                        <td>@customer.Phone</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Right Panel: Repairs -->
+    <div style="width: 60%;">
+        @if (Model.SelectedCustomer != null)
+        {
+            <h4>Repairs for @Model.SelectedCustomer.Name</h4>
+            <a asp-action="CreateRepair" asp-controller="Mechanic" asp-route-customerId="@Model.SelectedCustomer.CustomerID"
+               class="btn btn-success mb-3">
+                + Add New Repair
+            </a>
+            <!-- Repair Search -->
+            <form method="get" asp-action="Dashboard" asp-controller="Mechanic" class="mb-3">
+                <input type="hidden" name="customerId" value="@Model.SelectedCustomer.CustomerID" />
+                <div class="input-group">
+                    <input type="text" name="repairSearchTerm" class="form-control" placeholder="Search repairs..." value="@ViewData["RepairSearchTerm"]" />
+                    <div class="input-group-text d-flex gap-2">
+                        <label class="form-check-label">
+                            <input type="radio" name="repairSearchBy" value="Model" class="form-check-input"
+                            @(ViewData["RepairSearchBy"]?.ToString() == "Model" ? "checked" : "") /> Model
+                        </label>
+                        <label class="form-check-label ms-2">
+                            <input type="radio" name="repairSearchBy" value="Date" class="form-check-input"
+                            @(ViewData["RepairSearchBy"]?.ToString() == "Date" ? "checked" : "") /> Date
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+
+            <!-- Repair Table -->
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Car Model</th>
+                        <th>Date</th>
+                        <th>Cost</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var repair in Model.Repairs)
+                    {
+                        <tr>
+                            <td>@repair.Car.Model</td>
+                            <td>@repair.RepairDate.ToShortDateString()</td>
+                            <td>$@repair.Cost</td>
+                            <td>
+                                <button type="button"
+                                        class="btn btn-info btn-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#repairInfoModal"
+                                        data-repair-id="@repair.RepairID"
+                                        onclick="loadRepairInfo(this)">
+                                    INFO
+                                </button>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>Select a customer to view their repairs.</p>
+        }
+    </div>
+</div>
+
+<div class="modal fade" id="repairInfoModal" tabindex="-1" aria-labelledby="repairInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="repairInfoModalLabel">Repair Info</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Car:</strong> <span id="infoCarModel"></span></p>
+                <p><strong>Date:</strong> <span id="infoRepairDate"></span></p>
+                <p><strong>Description:</strong> <span id="infoDescription"></span></p>
+                <p><strong>Cost:</strong> $<span id="infoCost"></span></p>
+                <p><strong>Mechanic:</strong> <span id="infoMechanic"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.querySelectorAll(".clickable-row").forEach(row => {
+            row.addEventListener("click", () => {
+                const url = row.getAttribute("data-url");
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    </script>
+    <script>
+        function loadRepairInfo(button) {
+            const repairId = button.getAttribute("data-repair-id");
+
+            fetch(`/Mechanic/GetRepairInfo/${repairId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to load repair info.");
+                    }
+                    return response.json();
+                })
+                .then(repair => {
+                    document.getElementById("infoCarModel").textContent = repair.carModel;
+                    document.getElementById("infoRepairDate").textContent = repair.repairDate;
+                    document.getElementById("infoDescription").textContent = repair.description;
+                    document.getElementById("infoCost").textContent = repair.cost;
+                    document.getElementById("infoMechanic").textContent = repair.mechanicName;
+                })
+                .catch(error => {
+                    alert(error.message);
+                });
+        }
+    </script>
+
+}

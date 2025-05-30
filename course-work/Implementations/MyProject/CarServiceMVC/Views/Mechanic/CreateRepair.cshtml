@@ -1,0 +1,31 @@
+﻿@{
+    ViewBag.Title = "Add Repair";
+}
+
+<h2>Add New Repair</h2>
+
+<form asp-action="CreateRepair" method="post">
+    <input type="hidden" name="customerId" value="@ViewBag.CustomerId" />
+
+    <div class="mb-3">
+        <label for="CarID">Car</label>
+        <select name="CarID" class="form-control" asp-items="ViewBag.Cars"></select>
+    </div>
+
+    <div class="mb-3">
+        <label for="RepairDate">Date</label>
+        <input type="date" name="RepairDate" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label for="Description">Description</label>
+        <input type="text" name="Description" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label for="Cost">Cost</label>
+        <input type="number" name="Cost" class="form-control" step="0.01" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Repair</button>
+</form>

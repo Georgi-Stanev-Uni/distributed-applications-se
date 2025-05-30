@@ -1,0 +1,44 @@
+﻿@model CarServiceMVC.Models.RepairModel
+
+<h2>Create New Repair</h2>
+
+<form asp-action="CreateRepair" method="post">
+    <div class="form-group">
+        <label for="CarID">Car</label>
+        <select asp-for="CarID" asp-items="ViewBag.Cars" class="form-control"></select>
+        <span asp-validation-for="CarID" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label for="MechanicID">Mechanic</label>
+        <select asp-for="MechanicID" asp-items="ViewBag.Mechanics" class="form-control"></select>
+        <span asp-validation-for="MechanicID" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="RepairDate"></label>
+        <input asp-for="RepairDate" type="date" class="form-control" />
+        <span asp-validation-for="RepairDate" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Description"></label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Cost"></label>
+        <input asp-for="Cost" type="number" step="0.01" class="form-control" />
+        <span asp-validation-for="Cost" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Repair</button>
+    <a asp-action="AdminPanel" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

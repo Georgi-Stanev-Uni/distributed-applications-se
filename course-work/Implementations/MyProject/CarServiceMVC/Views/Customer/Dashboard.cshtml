@@ -1,0 +1,189 @@
+﻿@model CarServiceMVC.ViewModels.CustomerDashboardViewModel
+
+<h2>Your Dashboard</h2>
+
+<div style="display: flex; gap: 20px;">
+    <!-- Cars Table -->
+    <div style="width: 40%;">
+        <h3>Your Cars</h3>
+        <div class="mb-3">
+            <a asp-action="CreateCar" asp-controller="Customer" class="btn btn-success">Add New Car</a>
+        </div>
+
+        
+            
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var car in Model.Cars)
+                {
+                    <tr class="clickable-row" data-url="@Url.Action("Dashboard", "Customer", new { carId = car.CarID })">
+                        <td>@car.Make</td>
+                        <td>@car.Model</td>
+                        <td>@car.Year</td>
+                        <td>
+                            <button type="button"
+                                    class="btn btn-info btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#carInfoModal"
+                                    data-carid="@car.CarID"
+                                    onclick="event.stopPropagation(); loadCarInfo(this);">
+                                INFO
+                            </button>
+
+                        </td>
+                    </tr>
+                }
+            </tbody>
+
+        </table>
+    </div>
+
+    <!-- Repairs Table -->
+    <div style="width: 60%;">
+        @if (Model.SelectedCar != null)
+        {
+            <h3>Repairs for @Model.SelectedCar.Make @Model.SelectedCar.Model (@Model.SelectedCar.Year)</h3>
+
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Cost</th>
+                        <th>Mechanic</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var repair in Model.SelectedCar.Repairs)
+                    {
+                        <tr>
+                            <td>@repair.RepairDate.ToShortDateString()</td>
+                            <td>@repair.Cost.ToString()</td>
+                            <td>@repair.Mechanic?.Name</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No car selected or no cars available.</p>
+        }
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="carInfoModal" tabindex="-1" aria-labelledby="carInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="carInfoForm" method="post" asp-action="UpdateCar" asp-controller="Customer">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="carInfoModalLabel">Car Info</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 text-center">
+                        <img id="CarImagePreview" src="" alt="Car Image" class="img-fluid rounded" style="max-height: 200px;" />
+                    </div>
+                    <input type="hidden" id="CarID" name="CarID" />
+                    <div class="mb-3">
+                        <label for="Make" class="form-label">Make</label>
+                        <input type="text" class="form-control" id="Make" name="Make" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="Model" class="form-label">Model</label>
+                        <input type="text" class="form-control" id="Model" name="Model" required />
+                    </div>
+                    <div class="mb-3">
+                        <label for="Year" class="form-label">Year</label>
+                        <input type="number" class="form-control" id="Year" name="Year" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="LicensePlate" class="form-label">License Plate</label>
+                        <input type="text" class="form-control" id="LicensePlate" name="LicensePlate" />
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                    <button type="button" id="deleteCarBtn" class="btn btn-danger">Delete</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.querySelectorAll(".clickable-row").forEach(row => {
+            row.addEventListener("click", () => {
+                const url = row.getAttribute("data-url");
+                if (url) {
+                    window.location.href = url;
+                }
+            });
+        });
+    </script>
+    <script>
+        function loadCarInfo(button) {
+            const carId = button.getAttribute("data-carid");
+
+            fetch(`/Customer/GetCarInfo/${carId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to load car info.");
+                    }
+                    return response.json();
+                })
+                        .then(car => {
+            document.getElementById("CarID").value = car.carID;
+            document.getElementById("Make").value = car.make;
+            document.getElementById("Model").value = car.model;
+            document.getElementById("Year").value = car.year || "";
+            document.getElementById("LicensePlate").value = car.licensePlate || "";
+
+            const imageElement = document.getElementById("CarImagePreview");
+            if (car.imagePath) {
+
+                imageElement.src = "/" + car.imagePath.replace(/\\/g, "/");
+                imageElement.style.display = "block";
+            } else {
+                imageElement.style.display = "none";
+            }
+
+            // Attach delete action
+            const deleteBtn = document.getElementById("deleteCarBtn");
+            deleteBtn.onclick = function () {
+                if (confirm(`Are you sure you want to delete the car ${car.make} ${car.model}?`)) {
+                    fetch(`/Customer/DeleteCar/${car.carID}`, {
+                        method: "POST",
+                        headers: { "RequestVerificationToken": getAntiForgeryToken() }
+                    }).then(resp => {
+                        if (resp.ok) {
+                            location.reload();
+                        } else {
+                            alert("Delete failed.");
+                        }
+                    });
+                }
+            };
+        })
+
+                .catch(error => alert(error.message));
+        }
+
+        // Utility to get AntiForgeryToken from page
+        function getAntiForgeryToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]').value;
+        }
+    </script>
+}
+
